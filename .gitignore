@@ -1,0 +1,7 @@
+.build/
+build/
+.pi/
+.DS_Store
+*.xcodeproj
+*.xcworkspace
+*.log
