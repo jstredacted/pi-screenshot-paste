@@ -11,7 +11,8 @@ When Ghostty is frontmost and your clipboard contains an image, `Cmd+V` is inter
 - Saves the image to `~/Desktop/.ghostty_paste` by default.
 - Types the saved file path into the frontmost app.
 - Optionally prepends a prefix such as `@` for Pi-style file references.
-- Cleans up old saved screenshots automatically.
+- Keeps saved screenshots on disk by default, so pasted paths stay valid later in the Pi session.
+- Can optionally clean up old saved screenshots if you configure a retention window.
 - Runs as a menu bar app and can start at login via LaunchAgent.
 
 ## Requirements
@@ -122,10 +123,16 @@ defaults write com.justin.PiScreenshotPaste outputDirectory "~/Desktop/.ghostty_
 
 ### Cleanup age
 
-Default is 600 seconds:
+Default is disabled (`0`), meaning screenshots persist:
 
 ```bash
-defaults write com.justin.PiScreenshotPaste cleanupAfterSeconds -double 600
+defaults write com.justin.PiScreenshotPaste cleanupAfterSeconds -float 0
+```
+
+Set a positive value to enable automatic cleanup. Example: delete saved screenshots older than one day:
+
+```bash
+defaults write com.justin.PiScreenshotPaste cleanupAfterSeconds -float 86400
 ```
 
 ## Menu bar controls

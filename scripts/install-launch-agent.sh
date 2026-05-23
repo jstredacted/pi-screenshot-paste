@@ -46,9 +46,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>1.0.2</string>
+  <string>1.0.3</string>
   <key>CFBundleVersion</key>
-  <string>3</string>
+  <string>4</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>LSUIElement</key>
@@ -59,8 +59,14 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Keep the bundle identity stable for macOS Privacy/TCC.
-codesign --force --sign - "$APP" >/dev/null
+# Keep the bundle identity stable for macOS Privacy/TCC. A plain ad-hoc
+# signature falls back to a cdhash designated requirement, which changes on
+# every rebuild and makes macOS treat the helper as a new app for Accessibility
+# and Input Monitoring. The explicit identifier requirement keeps rebuilds from
+# rotating the privacy identity.
+codesign --force --sign - \
+  --requirements '=designated => identifier "com.justin.PiScreenshotPaste"' \
+  "$APP" >/dev/null
 
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

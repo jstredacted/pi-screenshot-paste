@@ -28,9 +28,9 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         UserDefaults.standard.string(forKey: Defaults.pastePrefixKey) ?? ""
     }
 
-    private var cleanupAfterSeconds: TimeInterval {
+    private var cleanupAfterSeconds: TimeInterval? {
         let configured = UserDefaults.standard.double(forKey: Defaults.cleanupAfterSecondsKey)
-        return configured > 0 ? configured : 600
+        return configured > 0 ? configured : nil
     }
 
     private var outputDirectory: URL {
@@ -53,10 +53,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         setupStatusItem()
         requestAccessibilityIfNeeded()
         installEventTap()
-        cleanupOldScreenshots()
-        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            self?.cleanupOldScreenshots()
-        }
+        scheduleCleanupIfEnabled()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -82,7 +79,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         UserDefaults.standard.register(defaults: [
             Defaults.targetBundleIDsKey: ["com.mitchellh.ghostty"],
             Defaults.pastePrefixKey: "",
-            Defaults.cleanupAfterSecondsKey: 600,
+            Defaults.cleanupAfterSecondsKey: 0,
         ])
     }
 
@@ -297,7 +294,21 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func scheduleCleanupIfEnabled() {
+        guard cleanupAfterSeconds != nil else {
+            logState("Screenshot cleanup disabled; saved files persist")
+            return
+        }
+
+        cleanupOldScreenshots()
+        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.cleanupOldScreenshots()
+        }
+    }
+
     private func cleanupOldScreenshots() {
+        guard let cleanupAfterSeconds else { return }
+
         let directory = outputDirectory
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: directory,
