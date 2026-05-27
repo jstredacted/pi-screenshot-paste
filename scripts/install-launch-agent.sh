@@ -10,10 +10,8 @@ APP_BIN="$APP/Contents/MacOS/PiScreenshotPaste"
 APP_RESOURCES="$APP/Contents/Resources"
 PLIST="$HOME/Library/LaunchAgents/com.justin.PiScreenshotPaste.plist"
 
-if [[ ! -x "$BIN" ]]; then
-  echo "Building release binary..."
-  (cd "$ROOT" && mise exec -- swift build -c release)
-fi
+echo "Building release binary..."
+(cd "$ROOT" && mise exec -- swift build -c release)
 
 mkdir -p "$APP/Contents/MacOS" "$APP_RESOURCES" "$HOME/Library/LaunchAgents"
 cp "$BIN" "$APP_BIN"
@@ -26,6 +24,10 @@ fi
 
 if [[ -f "$ROOT/Sources/PiScreenshotPaste/Resources/PiPaste.icns" ]]; then
   cp "$ROOT/Sources/PiScreenshotPaste/Resources/PiPaste.icns" "$APP_RESOURCES/PiPaste.icns"
+fi
+
+if [[ -f "$ROOT/Sources/PiScreenshotPaste/Resources/MenuBarIcon.png" ]]; then
+  cp "$ROOT/Sources/PiScreenshotPaste/Resources/MenuBarIcon.png" "$APP_RESOURCES/MenuBarIcon.png"
 fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST

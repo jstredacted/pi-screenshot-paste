@@ -85,12 +85,13 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let logoURL = Bundle.module.url(forResource: "PiPaste", withExtension: "png"),
-           let logo = NSImage(contentsOf: logoURL) {
-            logo.size = NSSize(width: 18, height: 18)
+        if let logo = loadMenuBarIcon() {
+            logo.size = NSSize(width: 14, height: 18)
             logo.isTemplate = false
+            statusItem.button?.imageScaling = .scaleProportionallyUpOrDown
             statusItem.button?.image = logo
             statusItem.button?.imagePosition = .imageOnly
+            statusItem.button?.title = ""
             statusItem.button?.setAccessibilityLabel("PiPaste")
             hasStatusLogo = true
         } else {
@@ -112,6 +113,22 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Restart Event Tap", action: #selector(restartEventTap), keyEquivalent: "r"))
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
         statusItem.menu = menu
+    }
+
+    private func loadMenuBarIcon() -> NSImage? {
+        let resourceURLs = [
+            Bundle.module.url(forResource: "MenuBarIcon", withExtension: "png"),
+            Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+            Bundle.module.url(forResource: "PiPaste", withExtension: "png"),
+        ]
+
+        for url in resourceURLs.compactMap({ $0 }) {
+            if let image = NSImage(contentsOf: url) {
+                return image
+            }
+        }
+
+        return nil
     }
 
     private func requestAccessibilityIfNeeded() {
