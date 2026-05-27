@@ -42,6 +42,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
             .appendingPathComponent(".ghostty_paste", isDirectory: true)
     }
 
+    @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         guard acquireSingleInstanceLock() else {
@@ -56,6 +57,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         scheduleCleanupIfEnabled()
     }
 
+    @MainActor
     func applicationWillTerminate(_ notification: Notification) {
         uninstallEventTap()
         releaseSingleInstanceLock()
@@ -83,6 +85,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         ])
     }
 
+    @MainActor
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let logo = loadMenuBarIcon() {
@@ -131,6 +134,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         return nil
     }
 
+    @MainActor
     private func requestAccessibilityIfNeeded() {
         // Do not trigger macOS permission prompts on every launch. The app may be
         // restarted by launchd after a rebuild; prompting here creates the
@@ -143,6 +147,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         updatePermissionStatus(tapReady: eventTap != nil)
     }
 
+    @MainActor
     private func installEventTap() {
         uninstallEventTap()
 
@@ -318,9 +323,17 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         }
 
         cleanupOldScreenshots()
-        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            self?.cleanupOldScreenshots()
-        }
+        cleanupTimer = Timer.scheduledTimer(
+            timeInterval: 60,
+            target: self,
+            selector: #selector(cleanupOldScreenshotsTimerFired(_:)),
+            userInfo: nil,
+            repeats: true
+        )
+    }
+
+    @objc private func cleanupOldScreenshotsTimerFired(_ timer: Timer) {
+        cleanupOldScreenshots()
     }
 
     private func cleanupOldScreenshots() {
@@ -342,6 +355,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    @MainActor
     private func updatePermissionStatus(tapReady: Bool) {
         let trusted = AXIsProcessTrusted()
         let listen = CGPreflightListenEventAccess()
@@ -356,7 +370,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
             if FileManager.default.fileExists(atPath: url.path),
                let handle = try? FileHandle(forWritingTo: url) {
                 defer { try? handle.close() }
-                try? handle.seekToEnd()
+                _ = try? handle.seekToEnd()
                 try? handle.write(contentsOf: data)
             } else {
                 try? data.write(to: url)
@@ -364,11 +378,13 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    @MainActor
     @objc private func refreshPermissionStatus() {
         updatePermissionStatus(tapReady: eventTap != nil)
         logState("Manual status refresh; AX trusted=\(AXIsProcessTrusted()); listen=\(CGPreflightListenEventAccess()); tapReady=\(eventTap != nil)")
     }
 
+    @MainActor
     @objc private func requestAccessibilityPermission() {
         let promptKey = "AXTrustedCheckOptionPrompt"
         let options = [promptKey: true] as CFDictionary
@@ -377,6 +393,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         updatePermissionStatus(tapReady: eventTap != nil)
     }
 
+    @MainActor
     @objc private func requestInputMonitoringPermission() {
         _ = CGRequestListenEventAccess()
         openPrivacyPane("Privacy_ListenEvent")
@@ -389,20 +406,24 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    @MainActor
     @objc private func openOutputFolder() {
         ensureOutputDirectory()
         NSWorkspace.shared.open(outputDirectory)
     }
 
+    @MainActor
     @objc private func copyOutputFolderPath() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(outputDirectory.path, forType: .string)
     }
 
+    @MainActor
     @objc private func restartEventTap() {
         installEventTap()
     }
 
+    @MainActor
     @objc private func quit() {
         NSApp.terminate(nil)
     }
