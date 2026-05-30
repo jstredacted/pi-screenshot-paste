@@ -216,6 +216,7 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
         guard type == .keyDown else { return Unmanaged.passUnretained(event) }
         guard isCommandV(event) else { return Unmanaged.passUnretained(event) }
         guard isTargetTerminalFrontmost() else { return Unmanaged.passUnretained(event) }
+        guard shouldInterceptClipboardAsImage() else { return Unmanaged.passUnretained(event) }
         guard let pngURL = saveClipboardImageAsPNG() else { return Unmanaged.passUnretained(event) }
 
         typeTextIntoFrontmostApp(pastePrefix + pngURL.path)
@@ -233,6 +234,39 @@ private final class ScreenshotPasteApp: NSObject, NSApplicationDelegate {
     private func isTargetTerminalFrontmost() -> Bool {
         guard let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else { return false }
         return targetBundleIDs.contains(bundleID)
+    }
+
+    private func shouldInterceptClipboardAsImage() -> Bool {
+        let pasteboard = NSPasteboard.general
+
+        // Microsoft Word and other rich text editors can publish both textual
+        // and image representations for the same copy operation. Pi Paste is
+        // only supposed to hijack image-only screenshot payloads; normal text,
+        // RTF, or HTML should pass through to the terminal unchanged.
+        if clipboardContainsTextPayload(pasteboard) {
+            return false
+        }
+
+        return NSImage(pasteboard: pasteboard) != nil
+    }
+
+    private func clipboardContainsTextPayload(_ pasteboard: NSPasteboard) -> Bool {
+        if let text = pasteboard.string(forType: .string), !text.isEmpty {
+            return true
+        }
+
+        let richTextTypes: [NSPasteboard.PasteboardType] = [
+            .rtf,
+            .html,
+            NSPasteboard.PasteboardType("public.rtf"),
+            NSPasteboard.PasteboardType("public.html"),
+            NSPasteboard.PasteboardType("com.apple.flat-rtfd"),
+        ]
+
+        return richTextTypes.contains { type in
+            guard let data = pasteboard.data(forType: type) else { return false }
+            return !data.isEmpty
+        }
     }
 
     private func saveClipboardImageAsPNG() -> URL? {
